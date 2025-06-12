@@ -11,7 +11,8 @@ typedef union{
 //Declaracion de pines
 const int PINPWM = 10; //Pin de salida PWM (D10)
 const int buttonPin = 2;   // Pin digital 2 desginado para contar pulsos
-
+const int E_status_pin = 8; //Pin de salida para el estado de la E-Stop
+const int E_input_pin = 3; //Pin de para levantar interrupto de E-Stop
 
 //Variables holders para enviar datos
 FLOATUNION_t speed;
@@ -56,8 +57,11 @@ void setup() {
   PORTC &= ~_BV(PD0); // A0 pulldown
   pinMode(buttonPin, INPUT_PULLUP); // D2 con pullup
   pinMode(PINPWM, OUTPUT); //Pin de salida PWM
-  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT); 
+  pinMode(E_status_pin, OUTPUT); //Pin de salida para el estado de la E-Stop
+  pinMode(E_input_pin, INPUT); //Pin de entrada para levantar interrupto de E-Stop
   attachInterrupt(digitalPinToInterrupt(buttonPin), buttonInterrupt, FALLING);
+  attachInterrupt(digitalPinToInterrupt(E_input_pin), E_inputInterrupt, FALLING);
   TCCR1B = TCCR1B & 0b11111000 | 0x01;//Timer 1 con division de timer al minimo /1
   //TCCR1B = TCCR1B & B11111000 | B00000101 ; //Ajuste frecuencia PWM aprox 31.59KHz
 
@@ -80,6 +84,21 @@ void buttonInterrupt() {
   pulseCount++;
 }
 
+
+void E_inputInterrupt() {
+  analogWrite(PINPWM, 0);
+  // Indicador de E-Stop encendido
+  digitalWrite(E_status_pin, HIGH);
+
+  // Parpadeo del E-Stop
+  while (true) {
+    analogWrite(PINPWM, 0); // Por redundancia se apaga el motor en caso de
+    digitalWrite(E_status_pin, HIGH);
+    delay(150);
+    digitalWrite(E_status_pin, LOW);
+    delay(150);
+  }
+}
 
 ISR(TIMER2_OVF_vect) {
   //Esta funcion deberia llamarse cada 0.01 segundos
